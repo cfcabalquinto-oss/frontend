@@ -59,9 +59,9 @@ const performance = [
 ];
 
 const payments = [
-  { student: "Amelia Reyes", description: "Tuition · 2nd installment", amount: "$450", date: "Nov 08", status: "Paid" },
-  { student: "Noah Santos", description: "Laboratory fee", amount: "$85", date: "Nov 06", status: "Paid" },
-  { student: "Sofia Cruz", description: "Tuition · 2nd installment", amount: "$450", date: "Due Nov 15", status: "Due" },
+  { student: "Amelia Reyes", description: "Tuition · 2nd installment", amount: "₱450", date: "Nov 08", status: "Paid" },
+  { student: "Noah Santos", description: "Laboratory fee", amount: "₱85", date: "Nov 06", status: "Paid" },
+  { student: "Sofia Cruz", description: "Tuition · 2nd installment", amount: "₱450", date: "Due Nov 15", status: "Due" },
 ];
 
 const railItems = [
@@ -424,11 +424,11 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-2 gap-4 border-y border-ivory/40 px-5 py-4 sm:mx-6 sm:px-0">
                 <div>
-                  <p className="font-serif text-2xl">$12,450</p>
+                  <p className="font-serif text-2xl">₱12,450</p>
                   <p className="mt-1 text-[10px] opacity-60">Collected this month</p>
                 </div>
                 <div className="border-l border-ivory/40 pl-4">
-                  <p className="font-serif text-2xl">$2,180</p>
+                  <p className="font-serif text-2xl">₱2,180</p>
                   <p className="mt-1 text-[10px] opacity-60">Outstanding fees</p>
                 </div>
               </div>
