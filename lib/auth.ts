@@ -1,6 +1,8 @@
 // lib/auth.ts
 import { CONFIG } from "./config";
 
+export type UserRole = "student" | "professor";
+
 export const getAccessToken = (): string | null => {
   if (typeof window === "undefined") return null;
   const token = localStorage.getItem(CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
@@ -16,12 +18,29 @@ export const getUserId = (): number | null => {
   if (!token) return null;
 
   try {
-    const payloadBase64 = token.split(".")[1];
-    const decodedPayload = JSON.parse(atob(payloadBase64));
+    const payloadBase64 = token.split(".")[1]?.replace(/-/g, "+").replace(/_/g, "/");
+    if (!payloadBase64) return null;
+    const paddedPayload = payloadBase64.padEnd(Math.ceil(payloadBase64.length / 4) * 4, "=");
+    const decodedPayload = JSON.parse(atob(paddedPayload));
     const userId = decodedPayload.sub ?? decodedPayload.id ?? decodedPayload.userId;
     return userId ? Number(userId) : null;
   } catch {
     return null;
+  }
+};
+
+export const getUserRole = (): UserRole => {
+  const token = getAccessToken();
+  if (!token) return "student";
+
+  try {
+    const payloadBase64 = token.split(".")[1]?.replace(/-/g, "+").replace(/_/g, "/");
+    if (!payloadBase64) return "student";
+    const paddedPayload = payloadBase64.padEnd(Math.ceil(payloadBase64.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(paddedPayload)) as { role?: unknown };
+    return payload.role === "professor" ? "professor" : "student";
+  } catch {
+    return "student";
   }
 };
 

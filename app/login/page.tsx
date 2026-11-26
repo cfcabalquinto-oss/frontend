@@ -38,6 +38,10 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
+      if (!data?.accessToken) {
+        throw new Error("Sign in failed because the server did not return an access token.");
+      }
+
       setTokens(data.accessToken, data.refreshToken);
       router.push(CONFIG.ROUTES.DASHBOARD);
     } catch (err: unknown) {
@@ -52,9 +56,9 @@ export default function LoginPage() {
       title="Welcome back"
       description="Sign in to pick up right where you left off."
       footer={
-        <p className="text-center text-sm opacity-70">
-          New to learnspace?{" "}
-          <Link href={CONFIG.ROUTES.REGISTER} className="font-semibold underline underline-offset-4">
+        <p className="text-center text-sm text-[#9b9ba2]">
+          New to Adali?{" "}
+          <Link href={CONFIG.ROUTES.REGISTER} className="font-semibold text-[#ff9a55] transition hover:text-white">
             Create an account
           </Link>
         </p>
@@ -62,12 +66,12 @@ export default function LoginPage() {
     >
       <form onSubmit={handleLogin} className="space-y-5">
         {error && (
-          <div role="alert" className="carbon-inset rounded-xl p-3 text-sm">
+          <div role="alert" className="rounded-xl border border-[#792d20] bg-[#24100c] p-3 text-sm text-[#ffad99]">
             {error}
           </div>
         )}
         <div className="space-y-2">
-          <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+          <Label htmlFor="username" className="text-sm font-medium text-[#dedee1]">Username</Label>
           <Input
             id="username"
             type="text"
@@ -76,11 +80,11 @@ export default function LoginPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="carbon-inset h-12 rounded-xl px-4 focus-visible:ring-ivory"
+            className="h-12 rounded-xl border-white/10 bg-[#09090b] px-4 text-sm text-white placeholder:text-[#6f6f77] focus-visible:border-[#d9470a] focus-visible:ring-2 focus-visible:ring-[#d9470a]/30"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium text-[#dedee1]">Password</Label>
           <Input
             id="password"
             type="password"
@@ -89,12 +93,12 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="carbon-inset h-12 rounded-xl px-4 focus-visible:ring-ivory"
+            className="h-12 rounded-xl border-white/10 bg-[#09090b] px-4 text-sm text-white placeholder:text-[#6f6f77] focus-visible:border-[#d9470a] focus-visible:ring-2 focus-visible:ring-[#d9470a]/30"
           />
         </div>
         <Button
           type="submit"
-          className="carbon-inset h-12 w-full rounded-xl text-sm font-medium hover:bg-carbon"
+          className="auth-signin-button h-12 w-full rounded-xl text-sm font-bold transition"
           disabled={loading}
         >
           {loading ? "Logging in..." : "Sign in"}

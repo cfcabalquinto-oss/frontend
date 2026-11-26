@@ -45,9 +45,9 @@ export default function RegisterPage() {
       title="Create your account"
       description="Build a learning routine that fits your life."
       footer={
-        <p className="text-center text-sm opacity-70">
+        <p className="text-center text-sm text-[#9b9ba2]">
           Already have an account?{" "}
-          <Link href={CONFIG.ROUTES.LOGIN} className="font-semibold underline underline-offset-4">
+          <Link href={CONFIG.ROUTES.LOGIN} className="font-semibold text-[#ff9a55] transition hover:text-white">
             Sign in
           </Link>
         </p>
@@ -55,12 +55,12 @@ export default function RegisterPage() {
     >
       <form onSubmit={handleRegister} className="space-y-5">
         {error && (
-          <div role="alert" className="carbon-inset rounded-xl p-3 text-sm">
+          <div role="alert" className="rounded-xl border border-[#792d20] bg-[#24100c] p-3 text-sm text-[#ffad99]">
             {error}
           </div>
         )}
         <div className="space-y-2">
-          <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+          <Label htmlFor="username" className="text-sm font-medium text-[#dedee1]">Username</Label>
           <Input
             id="username"
             type="text"
@@ -69,11 +69,11 @@ export default function RegisterPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            className="carbon-inset h-12 rounded-xl px-4 focus-visible:ring-ivory"
+            className="h-12 rounded-xl border-white/10 bg-[#09090b] px-4 text-sm text-white placeholder:text-[#6f6f77] focus-visible:border-[#d9470a] focus-visible:ring-2 focus-visible:ring-[#d9470a]/30"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium text-[#dedee1]">Password</Label>
           <Input
             id="password"
             type="password"
@@ -82,12 +82,12 @@ export default function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="carbon-inset h-12 rounded-xl px-4 focus-visible:ring-ivory"
+            className="h-12 rounded-xl border-white/10 bg-[#09090b] px-4 text-sm text-white placeholder:text-[#6f6f77] focus-visible:border-[#d9470a] focus-visible:ring-2 focus-visible:ring-[#d9470a]/30"
           />
         </div>
         <Button
           type="submit"
-          className="carbon-inset h-12 w-full rounded-xl text-sm font-medium hover:bg-carbon"
+          className="h-12 w-full rounded-xl bg-[#c93e08] text-sm font-bold text-white shadow-[0_8px_22px_rgba(201,62,8,0.2)] transition hover:bg-[#e24a10]"
           disabled={loading}
         >
           {loading ? "Creating account..." : "Create account"}

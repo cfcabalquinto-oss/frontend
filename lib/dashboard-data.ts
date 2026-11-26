@@ -1,34 +1,61 @@
 import { apiClient } from "@/lib/api";
 
 type ApiRecord = Record<string, unknown>;
+export type EnrollmentStatus = "Enrolled" | "Drop Requested" | "Dropped";
+export type AttendanceStatus = "Present" | "Absent" | "Late";
+
+export interface DashboardProfile {
+  id: string;
+  name: string;
+}
 
 export interface DashboardStudent {
   id: string;
   name: string;
-  birthDate: string;
-  contact: string;
-  section: string;
-  enrolled: string;
+  sectionId: string | null;
+}
+
+export interface DashboardStudentAccount {
+  id: string;
+  username: string;
 }
 
 export interface DashboardSection {
   id: string;
   name: string;
-  teacher: string;
   subject: string;
+  teacher: string;
+  schedule: string;
+  room: string;
+  status?: EnrollmentStatus;
+  enrollmentId?: string;
+}
+
+export interface DashboardEnrollment {
+  id: string;
+  studentId: string;
+  student: string;
+  sectionId: string;
+  date: string;
+  status: EnrollmentStatus;
+  dropReason: string;
 }
 
 export interface DashboardAttendance {
   id: string;
+  studentId: string;
   student: string;
+  sectionId: string;
   section: string;
   date: string;
-  status: string;
+  status: AttendanceStatus;
 }
 
 export interface DashboardGrade {
   id: string;
+  studentId: string;
   student: string;
+  sectionId: string;
   section: string;
   tasks: string;
   attendance: string;
@@ -36,294 +63,143 @@ export interface DashboardGrade {
   average: string;
 }
 
-export interface DashboardFee {
-  id: string;
-  student: string;
-  description: string;
-  amount: string;
-  date: string;
-}
-
 export interface DashboardData {
-  students: DashboardStudent[];
+  role: "student" | "professor";
+  profile: DashboardProfile | null;
   sections: DashboardSection[];
-  subjects: string[];
-  professors: string[];
-  attendance: DashboardAttendance[];
+  students: DashboardStudent[];
+  studentAccounts: DashboardStudentAccount[];
+  enrollments: DashboardEnrollment[];
   grades: DashboardGrade[];
-  fees: DashboardFee[];
-  enrollmentCount: number;
-  totalFees: number;
+  attendance: DashboardAttendance[];
 }
 
-function isApiRecord(value: unknown): value is ApiRecord {
+function isRecord(value: unknown): value is ApiRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeKey(value: string): string {
-  return value.toLowerCase().replace(/[_-]/g, "");
-}
-
-function readValue(record: ApiRecord, ...keys: string[]): unknown {
-  const normalizedKeys = new Set(keys.map(normalizeKey));
-  const entry = Object.entries(record).find(([key]) => normalizedKeys.has(normalizeKey(key)));
-  return entry?.[1];
-}
-
-function readText(record: ApiRecord, ...keys: string[]): string | null {
-  const value = readValue(record, ...keys);
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+function text(record: ApiRecord, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
   return null;
 }
 
-function readRelationText(
-  record: ApiRecord,
-  directKeys: string[],
-  relationKey: string,
-  relationNameKeys: string[],
-): string | null {
-  const directValue = readText(record, ...directKeys);
-  if (directValue) return directValue;
-
-  const relation = readValue(record, relationKey);
-  return isApiRecord(relation) ? readText(relation, ...relationNameKeys) : null;
-}
-
-function getRows(value: unknown, resource: string): ApiRecord[] {
-  let rows = value;
-
-  for (let depth = 0; depth < 3 && isApiRecord(rows); depth += 1) {
-    const wrappedRows = readValue(rows, "data", "items", "results");
-    if (wrappedRows === undefined) break;
-    rows = wrappedRows;
+function rows(value: unknown, name: string): ApiRecord[] {
+  if (!Array.isArray(value) || !value.every(isRecord)) {
+    throw new Error(`The dashboard ${name} data was returned in an unexpected format.`);
   }
-
-  if (!Array.isArray(rows) || !rows.every(isApiRecord)) {
-    throw new Error(`The ${resource} endpoint returned an unexpected response.`);
-  }
-
-  return rows;
-}
-
-function entityId(record: ApiRecord, keys: string[], fallback: string): string {
-  return readText(record, ...keys) ?? fallback;
-}
-
-function formatScore(record: ApiRecord, ...keys: string[]): string {
-  const value = readValue(record, ...keys);
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const score = value > 0 && value <= 1 ? value * 100 : value;
-    return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(score)}%`;
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const score = value.trim();
-    return score.endsWith("%") ? score : `${score}%`;
-  }
-
-  return "—";
-}
-
-function formatAmount(record: ApiRecord): { display: string; numeric: number } {
-  const value = readValue(record, "amount");
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return {
-      display: `₱${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value)}`,
-      numeric: value,
-    };
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const numeric = Number(value.replace(/[₱,\s]/g, ""));
-    return {
-      display: value.trim().startsWith("₱") ? value.trim() : `₱${value.trim()}`,
-      numeric: Number.isFinite(numeric) ? numeric : 0,
-    };
-  }
-
-  return { display: "—", numeric: 0 };
-}
-
-function displayDate(value: string | null): string {
-  if (!value) return "—";
   return value;
 }
 
-export async function fetchDashboardData(): Promise<DashboardData> {
-  const [studentResponse, sectionResponse, professorResponse, subjectResponse, attendanceResponse, gradeResponse, feeResponse, enrollmentResponse] =
-    await Promise.all([
-      apiClient<unknown>("/students", { requiresAuth: true }),
-      apiClient<unknown>("/sections", { requiresAuth: true }),
-      apiClient<unknown>("/professors", { requiresAuth: true }),
-      apiClient<unknown>("/subjects", { requiresAuth: true }),
-      apiClient<unknown>("/attendance", { requiresAuth: true }),
-      apiClient<unknown>("/grades", { requiresAuth: true }),
-      apiClient<unknown>("/fees", { requiresAuth: true }),
-      apiClient<unknown>("/enrollments", { requiresAuth: true }),
-    ]);
-
-  const studentRows = getRows(studentResponse, "students");
-  const sectionRows = getRows(sectionResponse, "sections");
-  const professorRows = getRows(professorResponse, "professors");
-  const subjectRows = getRows(subjectResponse, "subjects");
-  const attendanceRows = getRows(attendanceResponse, "attendance");
-  const gradeRows = getRows(gradeResponse, "grades");
-  const feeRows = getRows(feeResponse, "fees");
-  const enrollmentRows = getRows(enrollmentResponse, "enrollments");
-
-  const subjectsById = new Map(
-    subjectRows.map((subject, index) => [
-      entityId(subject, ["subject_id", "id"], `subject-${index}`),
-      readText(subject, "subject_name", "name") ?? "Subject not assigned",
-    ]),
-  );
-  const professorsById = new Map(
-    professorRows.map((professor, index) => [
-      entityId(professor, ["teacher_id", "professor_id", "id"], `professor-${index}`),
-      {
-        name: readText(professor, "prof_name", "professor_name", "name") ?? "Teacher not assigned",
-        subjectId: readText(professor, "subject_id", "subjectId"),
-        subject: readRelationText(professor, ["subject_name"], "subject", ["subject_name", "name"]),
-      },
-    ]),
-  );
-  const sections = sectionRows.map((section, index) => {
-    const teacherId = readText(section, "teacher_id", "teacherId", "professor_id");
-    const professor = teacherId ? professorsById.get(teacherId) : undefined;
-    const subjectId = readText(section, "subject_id", "subjectId") ?? professor?.subjectId;
-
-    return {
-      id: entityId(section, ["section_id", "id"], `section-${index}`),
-      name: readText(section, "section_name", "name") ?? `Section ${index + 1}`,
-      teacher:
-        readRelationText(section, ["prof_name", "teacher_name", "professor_name"], "teacher", ["prof_name", "name"]) ??
-        professor?.name ??
-        "Teacher not assigned",
-      subject:
-        readRelationText(section, ["subject_name"], "subject", ["subject_name", "name"]) ??
-        professor?.subject ??
-        (subjectId ? subjectsById.get(subjectId) : undefined) ??
-        "Subject not assigned",
-    };
-  });
-  const sectionsById = new Map(
-    sectionRows.map((section, index) => [
-      entityId(section, ["section_id", "id"], `section-${index}`),
-      readText(section, "section_name", "name") ?? `Section ${index + 1}`,
-    ]),
-  );
-
-  const enrollmentDates = new Map<string, string>();
-  for (const enrollment of enrollmentRows) {
-    const studentId = readText(enrollment, "student_id", "studentId");
-    const enrollmentDate = readText(enrollment, "enrollment_date", "enrollmentDate");
-    if (!studentId || !enrollmentDate) continue;
-
-    const existingDate = enrollmentDates.get(studentId);
-    if (!existingDate || enrollmentDate > existingDate) {
-      enrollmentDates.set(studentId, enrollmentDate);
-    }
-
+function score(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const normalized = value > 0 && value <= 1 ? value * 100 : value;
+    return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(normalized)}%`;
   }
+  if (typeof value === "string" && value.trim()) {
+    return value.trim().endsWith("%") ? value.trim() : `${value.trim()}%`;
+  }
+  return "—";
+}
 
-  const studentsById = new Map<string, string>();
-  const studentSectionsById = new Map<string, string>();
-  const students = studentRows.map((student, index) => {
-    const id = entityId(student, ["student_id", "id"], `student-${index}`);
-    const name = readRelationText(student, ["student_name", "name", "full_name"], "student", ["student_name", "name"]) ?? `Student ${id}`;
-    const sectionId = readText(student, "section_id", "sectionId");
-    const section =
-      readRelationText(student, ["section_name"], "section", ["section_name", "name"]) ??
-      (sectionId ? sectionsById.get(sectionId) : undefined) ??
-      "Section not assigned";
+function status(value: string | null): EnrollmentStatus {
+  if (value === "Dropped" || value === "Drop Requested") return value;
+  return "Enrolled";
+}
 
-    studentsById.set(id, name);
-    studentSectionsById.set(id, section);
+function formatDate(month: string | null, day: string | null): string {
+  if (!month || !day) return "Date not set";
+  return `${month} ${day}`;
+}
 
+export async function fetchDashboardData(): Promise<DashboardData> {
+  const response = await apiClient<unknown>("/dashboard", { requiresAuth: true });
+  if (!isRecord(response)) throw new Error("The dashboard endpoint returned an unexpected response.");
+
+  const profileRecord = isRecord(response.profile) ? response.profile : null;
+  const sectionRows = rows(response.sections, "sections");
+  const studentRows = rows(response.students, "students");
+  const studentAccountRows = rows(response.studentAccounts ?? [], "student accounts");
+  const enrollmentRows = rows(response.enrollments, "enrollments");
+  const attendanceRows = rows(response.attendance, "attendance");
+  const gradeRows = rows(response.grades, "grades");
+
+  const sections = sectionRows.map((record, index) => ({
+    id: text(record, "section_id") ?? `section-${index}`,
+    name: text(record, "section_name") ?? `Section ${index + 1}`,
+    subject: text(record, "subject_name") ?? "Subject not assigned",
+    teacher: text(record, "prof_name") ?? "Professor not assigned",
+    schedule: text(record, "schedule_text", "sched") ?? "Schedule to be announced",
+    room: text(record, "room") ?? "Room to be announced",
+    status: record.enrollment_status ? status(text(record, "enrollment_status")) : undefined,
+    enrollmentId: text(record, "enrollment_id") ?? undefined,
+  }));
+  const sectionNames = new Map(sections.map((section) => [section.id, `${section.subject} · ${section.name}`]));
+  const students = studentRows.map((record, index) => ({
+    id: text(record, "student_id") ?? `student-${index}`,
+    name: text(record, "student_name") ?? `Student ${index + 1}`,
+    sectionId: text(record, "section_id"),
+  }));
+  const studentAccounts = studentAccountRows.map((record, index) => ({
+    id: text(record, "user_id", "id") ?? `account-${index}`,
+    username: text(record, "username") ?? `Student account ${index + 1}`,
+  }));
+  const studentNames = new Map(students.map((student) => [student.id, student.name]));
+  const enrollments = enrollmentRows.map((record, index) => {
+    const studentId = text(record, "student_id") ?? "";
     return {
-      id,
-      name,
-      birthDate: displayDate(readText(student, "dateofbirth", "date_of_birth", "birth_date", "birthDate")),
-      contact: readText(student, "contact_num", "contact_number", "phone", "email") ?? "—",
-      section,
-      enrolled: displayDate(enrollmentDates.get(id) ?? null),
+      id: text(record, "enrollment_id") ?? `enrollment-${index}`,
+      studentId,
+      student: text(record, "student_name") ?? studentNames.get(studentId) ?? `Student ${studentId}`,
+      sectionId: text(record, "section_id") ?? "",
+      date: text(record, "enrollment_date") ?? "—",
+      status: status(text(record, "status")),
+      dropReason: text(record, "drop_reason") ?? "",
     };
   });
-
   const attendance = attendanceRows.map((record, index) => {
-    const studentId = readText(record, "student_id", "studentId");
-    const sectionId = readText(record, "section_id", "sectionId");
-    const month = readText(record, "attendance_month", "attendanceMonth");
-    const day = readText(record, "attendance_day", "attendanceDay");
-
+    const studentId = text(record, "student_id") ?? "";
+    const sectionId = text(record, "section_id") ?? "";
+    const recordStatus = text(record, "status");
     return {
-      id: entityId(record, ["attendance_id", "id"], `attendance-${index}`),
-      student:
-        readRelationText(record, ["student_name"], "student", ["student_name", "name"]) ??
-        (studentId ? studentsById.get(studentId) : undefined) ??
-        (studentId ? `Student ${studentId}` : "Unknown student"),
-      section:
-        readRelationText(record, ["section_name"], "section", ["section_name", "name"]) ??
-        (sectionId ? sectionsById.get(sectionId) : undefined) ??
-        (studentId ? studentSectionsById.get(studentId) : undefined) ??
-        "Section not assigned",
-      date:
-        readText(record, "date", "attendance_date") ??
-        (month && day ? `${month} ${day}` : displayDate(readText(record, "created_at", "createdAt"))),
-      status: readText(record, "status", "attendance_status", "attendanceStatus") ?? "Recorded",
+      id: text(record, "attendance_id") ?? `attendance-${index}`,
+      studentId,
+      student: text(record, "student_name") ?? studentNames.get(studentId) ?? `Student ${studentId}`,
+      sectionId,
+      section: text(record, "section_name") ?? sectionNames.get(sectionId) ?? "Section",
+      date: text(record, "date") ?? formatDate(text(record, "attendance_month"), text(record, "attendance_day")),
+      status: recordStatus === "Absent" || recordStatus === "Late" ? recordStatus : "Present",
     };
   });
-
-  const grades = gradeRows.map((grade, index) => {
-    const studentId = readText(grade, "student_id", "studentId");
-    const sectionId = readText(grade, "section_id", "sectionId");
-
+  const grades = gradeRows.map((record, index) => {
+    const studentId = text(record, "student_id") ?? "";
+    const sectionId = text(record, "section_id") ?? "";
     return {
-      id: entityId(grade, ["grade_id", "id"], `grade-${index}`),
-      student:
-        readRelationText(grade, ["student_name"], "student", ["student_name", "name"]) ??
-        (studentId ? studentsById.get(studentId) : undefined) ??
-        (studentId ? `Student ${studentId}` : "Unknown student"),
-      section:
-        readRelationText(grade, ["section_name"], "section", ["section_name", "name"]) ??
-        (sectionId ? sectionsById.get(sectionId) : undefined) ??
-        (studentId ? studentSectionsById.get(studentId) : undefined) ??
-        "Section not assigned",
-      tasks: formatScore(grade, "pt_ave", "tasks", "task_average"),
-      attendance: formatScore(grade, "attendance_ave", "attendance_average"),
-      exams: formatScore(grade, "exam_ave", "exam_average"),
-      average: formatScore(grade, "gen_ave", "general_average", "average"),
-    };
-  });
-
-  let totalFees = 0;
-  const fees = feeRows.map((fee, index) => {
-    const studentId = readText(fee, "student_id", "studentId");
-    const amount = formatAmount(fee);
-    totalFees += amount.numeric;
-
-    return {
-      id: entityId(fee, ["fees_id", "fee_id", "id"], `fee-${index}`),
-      student:
-        readRelationText(fee, ["student_name"], "student", ["student_name", "name"]) ??
-        (studentId ? studentsById.get(studentId) : undefined) ??
-        (studentId ? `Student ${studentId}` : "Unknown student"),
-      description: readText(fee, "trans_history", "transaction_history", "description") ?? "Fee record",
-      amount: amount.display,
-      date: displayDate(readText(fee, "created_at", "createdAt", "date")),
+      id: text(record, "grade_id") ?? `grade-${index}`,
+      studentId,
+      student: text(record, "student_name") ?? studentNames.get(studentId) ?? `Student ${studentId}`,
+      sectionId,
+      section: text(record, "section_name", "subject_name") ?? sectionNames.get(sectionId) ?? "Section",
+      tasks: score(record.PT_AVE),
+      attendance: score(record.Attendance_ave),
+      exams: score(record.exam_ave),
+      average: score(record.gen_ave),
     };
   });
 
   return {
-    students,
+    role: response.role === "professor" ? "professor" : "student",
+    profile: profileRecord
+      ? { id: text(profileRecord, "id") ?? "", name: text(profileRecord, "name") ?? "Adali user" }
+      : null,
     sections,
-    subjects: subjectRows.map((subject, index) => readText(subject, "subject_name", "name") ?? `Subject ${index + 1}`),
-    professors: professorRows.map((professor, index) => readText(professor, "prof_name", "professor_name", "name") ?? `Professor ${index + 1}`),
-    attendance,
+    students,
+    studentAccounts,
+    enrollments,
     grades,
-    fees,
-    enrollmentCount: enrollmentRows.length,
-    totalFees,
+    attendance,
   };
 }
