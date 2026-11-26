@@ -405,7 +405,7 @@ export default function DashboardPage() {
         </Link>
         <nav aria-label="Dashboard sections" className="flex flex-col gap-3">
           <a href="#schedule" title="Academic schedule" aria-label="Academic schedule" className="grid size-11 place-items-center rounded-xl bg-[#c93e08] text-white shadow-[0_8px_24px_rgba(201,62,8,0.22)]"><CalendarDays size={19} /></a>
-          <a href={role === "professor" ? "#courses" : "#subjects"} title={role === "professor" ? "Teaching sections" : "Enrolled subjects"} aria-label={role === "professor" ? "Teaching sections" : "Enrolled subjects"} className="grid size-11 place-items-center rounded-xl text-[#92929a] transition hover:bg-[#1a1a1d] hover:text-white"><BookOpen size={19} /></a>
+          <Link href="/dashboard/records" title="Academic performance and fees" aria-label="Academic performance and fees" className="grid size-11 place-items-center rounded-xl text-[#92929a] transition hover:bg-[#1a1a1d] hover:text-white"><BookOpen size={19} /></Link>
         </nav>
         <div className="mt-auto"><Button type="button" variant="ghost" size="icon" aria-label="Log out" onClick={logout} className="hover:bg-[#1a1a1d]"><LogOut size={18} /></Button></div>
       </aside>
