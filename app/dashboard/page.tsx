@@ -553,15 +553,10 @@ export default function DashboardPage() {
               ].map(({ label, value, icon: Icon }) => <article key={label} className="carbon-panel rounded-2xl p-5"><span className="grid size-9 place-items-center rounded-xl bg-[#d9470a]/10 text-[#ff9a55]"><Icon size={17} /></span><p className="mt-4 text-3xl font-bold tracking-tight">{value}</p><p className="mt-1 text-xs text-[#92929a]">{label}</p></article>)}
             </div>
 
-            <div className="mb-5 grid items-start gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="mb-5">
               <section id="schedule" className={cardClass}>
                 <PanelHeading eyebrow="This semester" title="Academic scheduling" detail="Your timetable with section, day, time, room, and professor." icon={CalendarDays} />
                 {sections.some((section) => section.status !== "Dropped") ? <ul className="space-y-2">{sections.filter((section) => section.status !== "Dropped").map((section) => <li key={section.id} className="carbon-inset flex flex-wrap items-center justify-between gap-3 rounded-xl p-3.5"><div className="min-w-0"><p className="truncate text-sm font-semibold">{section.subject}</p><p className="mt-1 text-xs text-[#a4a4ac]">{section.name} · {section.teacher}</p></div><div className="text-right text-xs text-[#c7c7ce]"><p>{section.schedule}</p><p className="mt-1 text-[#92929a]">{section.room}</p></div></li>)}</ul> : <EmptyState>Your class schedule will appear here once you are enrolled.</EmptyState>}
-              </section>
-
-              <section className={cardClass}>
-                <PanelHeading eyebrow="Your progress" title="Academic performance" detail="Current marks across your enrolled subjects." icon={GraduationCap} />
-                {grades.length ? <ul className="divide-y divide-white/[0.07]">{grades.map((grade) => <li key={grade.id} className="flex items-center justify-between gap-3 py-3 first:pt-0"><div className="min-w-0"><p className="truncate text-sm font-medium">{grade.section}</p><p className="mt-1 text-xs text-[#92929a]">Tasks {grade.tasks} · Attendance {grade.attendance} · Exam {grade.exams}</p></div><span className="rounded-xl bg-[#d9470a]/10 px-3 py-2 text-sm font-bold text-[#ff9a55]">{grade.average}</span></li>)}</ul> : <EmptyState>Grades have not been posted yet.</EmptyState>}
               </section>
             </div>
 
