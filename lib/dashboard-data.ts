@@ -110,6 +110,11 @@ function status(value: string | null): EnrollmentStatus {
   return "Enrolled";
 }
 
+function attendanceStatus(value: string | null): AttendanceStatus {
+  if (value === "Absent" || value === "Late") return value;
+  return "Present";
+}
+
 function formatDate(month: string | null, day: string | null): string {
   if (!month || !day) return "Date not set";
   return `${month} ${day}`;
@@ -171,7 +176,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       sectionId,
       section: text(record, "section_name") ?? sectionNames.get(sectionId) ?? "Section",
       date: text(record, "date") ?? formatDate(text(record, "attendance_month"), text(record, "attendance_day")),
-      status: recordStatus === "Absent" || recordStatus === "Late" ? recordStatus : "Present",
+      status: attendanceStatus(recordStatus),
     };
   });
   const grades = gradeRows.map((record, index) => {
